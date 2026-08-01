@@ -18,16 +18,22 @@ jobs:
       with:
         xcode-version: 'latest-stable'
 
+    - name: Unzip Project Files
+      run: |
+        # فك ضغط الملف المضغوط تلقائياً إذا كان موجوداً
+        if ls *.zip 1> /dev/null 2>&1; then
+          unzip -o *.zip
+        fi
+
     - name: Build Unsigned IPA
       run: |
-        # التأكد من وجود ملف مشروع أولاً لتجنب الأخطاء
         if ls *.xcodeproj 1> /dev/null 2>&1; then
           xcodebuild -project *.xcodeproj -scheme ${{ github.event.repository.name }} -sdk iphoneos -configuration Release clean build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
           mkdir -p Payload
           cp -r build/Release-iphoneos/*.app Payload/
           zip -r AppBuild.ipa Payload
         else
-          echo "لا توجد ملفات مشروع Xcode في المستودع بعد."
+          echo "خطأ: لم يتم العثور على ملف مشروع Xcode بعد فك الضغط."
           exit 1
         fi
 
