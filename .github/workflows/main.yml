@@ -20,18 +20,28 @@ jobs:
 
     - name: Unzip Project Files
       run: |
-        # فك ضغط الملف المضغوط تلقائياً إذا كان موجوداً
         if ls *.zip 1> /dev/null 2>&1; then
           unzip -o *.zip
         fi
 
     - name: Build Unsigned IPA
       run: |
-        if ls *.xcodeproj 1> /dev/null 2>&1; then
-          xcodebuild -project *.xcodeproj -scheme ${{ github.event.repository.name }} -sdk iphoneos -configuration Release clean build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+        # البحث عن ملف .xcodeproj حتى لو كان داخل مجلد فرعي
+        PROJ_PATH=$(find . -name "*.xcodeproj" -maxdepth 3 | head -n 1)
+
+        if [ -n "$PROJ_PATH" ]; then
+          PROJ_DIR=$(dirname "$PROJ_PATH")
+          cd "$PROJ_DIR"
+          
+          # استخراج اسم المشروع تلقائياً
+          PROJ_NAME=$(basename *.xcodeproj .xcodeproj)
+
+          xcodebuild -project "$PROJ_NAME.xcodeproj" -scheme "$PROJ_NAME" -sdk iphoneos -configuration Release clean build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+          
           mkdir -p Payload
           cp -r build/Release-iphoneos/*.app Payload/
           zip -r AppBuild.ipa Payload
+          mv AppBuild.ipa $GITHUB_WORKSPACE/
         else
           echo "خطأ: لم يتم العثور على ملف مشروع Xcode بعد فك الضغط."
           exit 1
